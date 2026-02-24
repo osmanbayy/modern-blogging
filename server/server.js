@@ -5,11 +5,13 @@ import "dotenv/config";
 import User from "./Schema/User.js";
 import { nanoid } from 'nanoid';
 import jwt from "jsonwebtoken";
+import cors from "cors";
 
 const server = express();
 const { MONGODB_URI, PORT, JWT_SECRET } = process.env;
 
 server.use(express.json());
+server.use(cors());
 
 const emailRegex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/; // regex for email
 const passwordRegex = /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{6,20}$/; // regex for password

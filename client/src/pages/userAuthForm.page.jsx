@@ -2,12 +2,42 @@ import { Link } from "react-router-dom";
 import InputBox from "../components/input.component";
 import googleIcon from "../imgs/google.png";
 import AnimationWrapper from "../common/page-animation";
+import { toast } from "react-hot-toast";
+import axios from "axios";
+import { storeInSession } from "../common/session";
 
 const UserAuthForm = ({ type }) => {
+
+  const userAuthThroughServer = (serverRoute, formData) => {
+    axios
+      .post(`${import.meta.env.VITE_API_BASE_URL}${serverRoute}`, formData)
+      .then(({ data }) => {
+        storeInSession("user", JSON.stringify(data));
+        console.log(sessionStorage.user);
+      })
+      .catch(({ response }) => {
+        toast.error(response.data.message);
+      });
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+
+    const serverRoute = type == "sign-in" ? "/signin" : "/signup";
+
+    const form = new FormData(e.currentTarget);
+    const formData = Object.fromEntries(form.entries());
+
+    userAuthThroughServer(serverRoute, formData);
+  };
+
   return (
     <AnimationWrapper keyValue={type}>
       <section className="flex items-center justify-center h-cover">
-        <form className="w-[80%] max-w-[400px]">
+        <form
+          onSubmit={handleSubmit}
+          className="w-[80%] max-w-[400px]"
+        >
           <h1 className="mb-24 text-4xl text-center capitalize font-gelasio">
             {type == "sign-in" ? "Welcome Back" : "Join Us Today"}
           </h1>
