@@ -1,9 +1,26 @@
-import { useState } from "react";
+import { useContext, useState } from "react";
 import { Link, Outlet } from "react-router-dom";
 import logo from "../imgs/logo.png";
+import { UserContext } from "../App";
+import UserNavigationPanel from "./user-navigation.component";
 
 const Navbar = () => {
   const [searchBoxVisibility, setSearchBoxVisibility] = useState(false);
+  const [userPanelVisibility, setUserPanelVisibility] = useState(false);
+
+  const {
+    userAuth,
+    userAuth: { access_token, profile_img },
+  } = useContext(UserContext);
+
+  const toggleSearchBoxVisibility = () => setSearchBoxVisibility(prev => !prev);
+  const toggleUserPanelVisibility = () => setUserPanelVisibility(prev => !prev);
+
+  const handleBlur = () => {
+    setTimeout(() => {
+      setUserPanelVisibility(false);
+    }, 150);
+  }
 
   return (
     <>
@@ -27,7 +44,7 @@ const Navbar = () => {
         <div className="flex items-center gap-3 ml-auto md:gap-6">
           {/* Search Box Trigger */}
           <button
-            onClick={() => setSearchBoxVisibility((currentVal) => !currentVal)}
+            onClick={toggleSearchBoxVisibility}
             className="flex items-center justify-center w-12 h-12 rounded-full md:hidden bg-grey"
           >
             <i className="text-xl fi fi-rr-search"></i>
@@ -39,13 +56,42 @@ const Navbar = () => {
             <p>Write</p>
           </Link>
 
-          {/* Auth Buttons */}
-          <Link to={"/signin"} className="py-2 btn-dark">
-            Sign In
-          </Link>
-          <Link to={"/signup"} className="hidden py-2 md:block btn-light">
-            Sign Up
-          </Link>
+          {access_token ? (
+            // Notification Button and Profile Image
+            <>
+              <Link to={"/dashboard/notification"}>
+                <button className="relative w-12 h-12 rounded-full bg-grey hover:bg-black/10">
+                  <i className="block mt-1 text-2xl fi fi-rr-bell"></i>
+                </button>
+              </Link>
+
+              <div className="relative">
+                <button
+                  onClick={toggleUserPanelVisibility}
+                  onBlur={handleBlur}
+                  className="w-12 h-12 mt-1"
+                >
+                  <img
+                    src={profile_img}
+                    alt="Profile Image"
+                    className="object-cover w-full h-full rounded-full"
+                  />
+                </button>
+
+                {userPanelVisibility && <UserNavigationPanel />}
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Auth Buttons */}
+              <Link to={"/signin"} className="py-2 btn-dark">
+                Sign In
+              </Link>
+              <Link to={"/signup"} className="hidden py-2 md:block btn-light">
+                Sign Up
+              </Link>
+            </>
+          )}
         </div>
       </nav>
 
