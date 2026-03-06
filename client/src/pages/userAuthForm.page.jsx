@@ -1,19 +1,25 @@
-import { Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import InputBox from "../components/input.component";
 import googleIcon from "../imgs/google.png";
 import AnimationWrapper from "../common/page-animation";
 import { toast } from "react-hot-toast";
 import axios from "axios";
 import { storeInSession } from "../common/session";
+import { useContext } from "react";
+import { UserContext } from "../App";
 
 const UserAuthForm = ({ type }) => {
+  const {
+    userAuth: { access_token },
+    setUserAuth,
+  } = useContext(UserContext);
 
   const userAuthThroughServer = (serverRoute, formData) => {
     axios
       .post(`${import.meta.env.VITE_API_BASE_URL}${serverRoute}`, formData)
       .then(({ data }) => {
         storeInSession("user", JSON.stringify(data));
-        console.log(sessionStorage.user);
+        setUserAuth(data);
       })
       .catch(({ response }) => {
         toast.error(response.data.message);
@@ -31,13 +37,12 @@ const UserAuthForm = ({ type }) => {
     userAuthThroughServer(serverRoute, formData);
   };
 
-  return (
+  return access_token ? (
+    <Navigate to={"/"} />
+  ) : (
     <AnimationWrapper keyValue={type}>
       <section className="flex items-center justify-center h-cover">
-        <form
-          onSubmit={handleSubmit}
-          className="w-[80%] max-w-[400px]"
-        >
+        <form onSubmit={handleSubmit} className="w-[80%] max-w-[400px]">
           <h1 className="mb-24 text-4xl text-center capitalize font-gelasio">
             {type == "sign-in" ? "Welcome Back" : "Join Us Today"}
           </h1>
