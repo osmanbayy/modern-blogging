@@ -7,6 +7,7 @@ import axios from "axios";
 import { storeInSession } from "../common/session";
 import { useContext } from "react";
 import { UserContext } from "../App";
+import { authWithGoogle } from "../common/firebase";
 
 const UserAuthForm = ({ type }) => {
   const {
@@ -22,7 +23,7 @@ const UserAuthForm = ({ type }) => {
         setUserAuth(data);
       })
       .catch(({ response }) => {
-        toast.error(response.data.message);
+        toast.error(response?.data?.message);
       });
   };
 
@@ -35,6 +36,23 @@ const UserAuthForm = ({ type }) => {
     const formData = Object.fromEntries(form.entries());
 
     userAuthThroughServer(serverRoute, formData);
+  };
+
+  const handleGoogleAuth = async (e) => {
+    e.preventDefault();
+  
+    try {
+  
+      const result = await authWithGoogle();
+      const idToken = await result.user.getIdToken();
+      const serverRoute = "/google-auth";
+      const formData = { access_token: idToken };
+  
+      userAuthThroughServer(serverRoute, formData);
+  
+    } catch (err) {
+      toast.error("Google auth failed");
+    }
   };
 
   return access_token ? (
@@ -87,7 +105,10 @@ const UserAuthForm = ({ type }) => {
           </div>
 
           {/* Google Button */}
-          <button className="flex items-center justify-center gap-4 btn-dark w-[90%] center">
+          <button
+            onClick={handleGoogleAuth}
+            className="flex items-center justify-center gap-4 btn-dark w-[90%] center"
+          >
             <img src={googleIcon} alt="" className="w-5" />
             continue with google
           </button>

@@ -6,9 +6,16 @@ import User from "./Schema/User.js";
 import { nanoid } from 'nanoid';
 import jwt from "jsonwebtoken";
 import cors from "cors";
+import admin from "firebase-admin"
+import { getAuth } from "firebase-admin/auth";
+import serviceAccountKey from "./serviceAccountKey.json" with { type: "json" };
 
 const server = express();
 const { MONGODB_URI, PORT, JWT_SECRET } = process.env;
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccountKey)
+});
 
 server.use(express.json());
 server.use(cors());
@@ -103,6 +110,58 @@ server.post("/signin", async (req, res) => {
     return res.status(500).json({ success: false, message: err.message });
   }
 })
+
+server.post("/google-auth", async (req, res) => {
+  const { access_token } = req.body;
+
+  try {
+    // 1. Token Doğrulama
+    const decodedUser = await getAuth().verifyIdToken(access_token);
+    let { email, name, picture } = decodedUser;
+
+    // Resim boyutunu güncelle (Değişkenin güncellenebilmesi için let veya yeni bir değişken gerekir)
+    picture = picture.replace("s96-c", "s384-c");
+
+    // 2. Kullanıcıyı Veritabanında Ara
+    let user = await User.findOne({ "personal_info.email": email })
+      .select("personal_info.fullname personal_info.username personal_info.profile_img google_auth");
+
+    if (user) {
+      // Giriş Senaryosu: Daha önce şifreyle kayıt olduysa Google ile girmesine izin verme (veya bağla)
+      if (!user.google_auth) {
+        return res.status(403).json({
+          success: false,
+          message: "This email cannot use Google Authentication. Try logging in using your password."
+        });
+      }
+    } else {
+      // Kayıt Senaryosu: Yeni kullanıcı oluştur
+      const username = await generateUsername(email);
+
+      user = new User({
+        personal_info: {
+          fullname: name,
+          email,
+          profile_img: picture,
+          username
+        },
+        google_auth: true
+      });
+
+      await user.save();
+    }
+
+    // 3. Başarılı Yanıt
+    return res.status(200).json(formatDataToSend(user));
+
+  } catch (err) {
+    console.error("Auth Error:", err.message);
+    return res.status(500).json({
+      success: false,
+      message: "Kimlik doğrulanırken bir hata oluştu: " + err.message
+    });
+  }
+});
 
 server.listen(PORT, () => {
   console.log(`Server listening on ${PORT} port`);
