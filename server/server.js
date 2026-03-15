@@ -1,17 +1,19 @@
 import express from 'express';
-import mongoose from 'mongoose';
 import bcrypt from "bcrypt";
 import "dotenv/config";
 import User from "./Schema/User.js";
-import { nanoid } from 'nanoid';
-import jwt from "jsonwebtoken";
 import cors from "cors";
 import admin from "firebase-admin"
 import { getAuth } from "firebase-admin/auth";
 import serviceAccountKey from "./serviceAccountKey.json" with { type: "json" };
+import { formatDataToSend, generateUsername } from './helpers/helpers.js';
+import { emailRegex, passwordRegex } from './constants/regex.js';
+import { connectMongoDB } from './config/database.js';
 
 const server = express();
 const { MONGODB_URI, PORT, JWT_SECRET } = process.env;
+
+connectMongoDB(MONGODB_URI);
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccountKey)
@@ -19,38 +21,6 @@ admin.initializeApp({
 
 server.use(express.json());
 server.use(cors());
-
-const emailRegex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/; // regex for email
-const passwordRegex = /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{6,20}$/; // regex for password
-
-mongoose.connect(MONGODB_URI)
-  .then(() => console.log("Connected to MongoDB"))
-  .catch(err => {
-    console.log("MongoDB Connection Failed: ", err.message);
-    process.exit(1);
-  });
-
-const formatDataToSend = (user) => {
-  const access_token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: "1d" });
-
-  return {
-    access_token,
-    profile_img: user.personal_info.profile_img,
-    username: user.personal_info.username,
-    fullname: user.personal_info.fullname
-  }
-}
-
-const generateUsername = async (email) => {
-  let username = email.split("@")[0];
-  // Check username is exists
-  const isUsernameNotUnique = await User.exists({ "personal_info.username": username });
-  if (isUsernameNotUnique) {
-    username = `${username}-${nanoid(4)}`;
-  }
-
-  return username;
-}
 
 server.post("/signup", async (req, res) => {
   const { fullname, email, password } = req.body;
